@@ -1,0 +1,1 @@
+tr 'vpntuyqcglibhmrsxadzefwoj' 'ADEHNTSMBWLFRIGKOCYUPCZJQ' < ciphertext.txt > output.txt
