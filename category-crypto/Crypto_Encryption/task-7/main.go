@@ -1,3 +1,14 @@
+/*
+ * @Author: LuminolT copper_sulfate@qq.com
+ * @Date: 2022-12-24 22:32:56
+ * @LastEditors: LuminolT copper_sulfate@qq.com
+ * @LastEditTime: 2022-12-27 06:39:36
+ * @FilePath: /task-7/main.go
+ * @Description: a go script to crack the AES-CBC-128 encryption
+ *
+ * Copyright (c) 2022 by LuminolT copper_sulfate@qq.com, All Rights Reserved.
+ */
+
 package main
 
 import (
@@ -11,12 +22,22 @@ import (
 	mopenssl "github.com/microsoft/go-crypto-openssl/openssl"
 )
 
+/**
+* @description: pad ciphertext with PKCS7
+* @param {[]byte} ciphertext
+* @param {int} blockSize
+* @return {*}
+ */
 func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
 
+/**
+ * @description: main function
+ * @return {*}
+ */
 func main() {
 	// initalization of the openssl
 	mopenssl.Init()
@@ -30,7 +51,6 @@ func main() {
 	}
 
 	// plain text padding with PKCS7
-
 	text_p = PKCS7Padding(text_p, 16)
 
 	iv, err := hex.DecodeString("aabbccddeeff00998877665544332211")
@@ -68,7 +88,7 @@ func main() {
 		}
 
 		// initialization of encrypter
-		type extraModes interface {
+		type CBCEncrypter interface {
 			NewCBCEncrypter(iv []byte) cipher.BlockMode
 		}
 
@@ -79,7 +99,7 @@ func main() {
 			return
 		}
 
-		encrypter := block.(extraModes).NewCBCEncrypter(iv) // CBC Encrpyter
+		encrypter := block.(CBCEncrypter).NewCBCEncrypter(iv) // CBC Encrpyter
 
 		// encrypt the plaintext
 		text_c_prime := make([]byte, len(text_c))
