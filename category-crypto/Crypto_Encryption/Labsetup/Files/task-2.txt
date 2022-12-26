@@ -1,0 +1,8 @@
+ciphertext.txt
+freq.py
+freq.sh
+output.txt
+pic_original.bmp
+sample_code.py
+task-2.txt
+words.txt
