@@ -2,8 +2,8 @@
  * @Author: LuminolT copper_sulfate@qq.com
  * @Date: 2022-12-24 22:32:56
  * @LastEditors: LuminolT copper_sulfate@qq.com
- * @LastEditTime: 2022-12-27 06:39:36
- * @FilePath: /task-7/main.go
+ * @LastEditTime: 2022-12-27 18:06:19
+ * @FilePath: /Lab-2-Crpyto-Sym/task-7/main.go
  * @Description: a go script to crack the AES-CBC-128 encryption
  *
  * Copyright (c) 2022 by LuminolT copper_sulfate@qq.com, All Rights Reserved.
@@ -18,6 +18,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sync"
 
 	mopenssl "github.com/microsoft/go-crypto-openssl/openssl"
 )
@@ -32,6 +33,51 @@ func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
+}
+
+/**
+ * @description: CrackCBC check the ciphertext equals ENC(text_p, key, iv)
+ * @param {[]byte} key
+ * @param {[]byte} text_c
+ * @param {[]byte} text_p
+ * @param {[]byte} iv
+ * @return {*}
+ */
+func CrackCBC(key []byte, text_c []byte, text_p []byte, iv []byte) (bool, []byte, error) {
+	// get the probable key
+
+	if len(key) > 16 {
+		return false, nil, nil
+	}
+
+	// key padding with '#' to 16 bytes
+	if len(key) < 16 {
+		key = append(key, []byte("################")[:16-len(key)]...)
+	}
+
+	// initialization of encrypter
+	type CBCEncrypter interface {
+		NewCBCEncrypter(iv []byte) cipher.BlockMode
+	}
+
+	block, err := mopenssl.NewAESCipher(key)
+	if err != nil {
+		fmt.Println(err)
+		return false, nil, err
+	}
+
+	encrypter := block.(CBCEncrypter).NewCBCEncrypter(iv) // CBC Encrpyter
+
+	// encrypt the plaintext
+	text_c_prime := make([]byte, len(text_c))
+	encrypter.CryptBlocks(text_c_prime, text_p)
+
+	// compare with the ciphertext
+	if string(text_c) == string(text_c_prime) {
+		return true, key, nil
+	} else {
+		return false, nil, nil
+	}
 }
 
 /**
@@ -68,47 +114,21 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	iter := 1
-	for scanner.Scan() {
+	var wg sync.WaitGroup
 
+	for scanner.Scan() {
 		// get the probable key
 		key := []byte(scanner.Text())
-
-		if len(key) > 16 {
-			continue
-		}
-
-		// iterator
-		fmt.Printf("\r iter: %d | ", iter)
-		iter++
-
-		// key padding with '#' to 16 bytes
-		if len(key) < 16 {
-			key = append(key, []byte("################")[:16-len(key)]...)
-		}
-
-		// initialization of encrypter
-		type CBCEncrypter interface {
-			NewCBCEncrypter(iv []byte) cipher.BlockMode
-		}
-
-		block, err := mopenssl.NewAESCipher(key)
-		if err != nil {
-			fmt.Println(err)
-			println(string(key))
-			return
-		}
-
-		encrypter := block.(CBCEncrypter).NewCBCEncrypter(iv) // CBC Encrpyter
-
-		// encrypt the plaintext
-		text_c_prime := make([]byte, len(text_c))
-		encrypter.CryptBlocks(text_c_prime, text_p)
-
-		// compare with the ciphertext
-		if string(text_c) == string(text_c_prime) {
-			fmt.Println("key: ", string(key))
-			break
-		}
+		wg.Add(1)
+		go func() {
+			flag, key_pad, err := CrackCBC(key, text_c, text_p, iv)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if flag {
+				fmt.Println("key: ", string(key_pad))
+			}
+		}()
 	}
+	wg.Wait()
 }
