@@ -8,5 +8,5 @@ Description:
 
 Copyright (c) 2023 by ${git_name_email}, All Rights Reserved. 
 '''
-print('Launch a missile.'.encode('ascii').hex())
+print('m = ' + 'Launch a missile.'.encode('ascii').hex())
 # output: 4c61756e63682061206d697373696c652e
